@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b7a75">
+<meta name="description" content="An installable voice-enabled calculator for Android and Windows.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<title>Voice Calculator</title>
+<style>
+:root{color-scheme:light dark;--bg:#e9eef0;--panel:#f7f9fa;--ink:#14262b;--muted:#5c7178;--key:#fff;--op:#d3e3e8;--accent:#0b7a75;--accentInk:#fff;--warn:#b4472d;--line:#d9e3e6}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1a1d;--panel:#16262a;--ink:#e6f0f2;--muted:#9ab0b5;--key:#1f3338;--op:#2a444b;--accent:#3cc4bb;--accentInk:#06201e;--warn:#f08a6c;--line:#294147}}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:16px;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:clamp(16px,4vw,24px);box-shadow:0 18px 48px #0002}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:13px;background:var(--accent);color:var(--accentInk);display:grid;place-items:center;font-size:24px;font-weight:800}.title{font-size:18px;font-weight:750;letter-spacing:-.4px}.subtitle{font-size:12px;color:var(--muted);margin-top:2px}.status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin:0 0 10px}.dot{height:9px;width:9px;border-radius:50%;background:var(--muted);flex:none}.listening .dot{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent)}.heard{font-size:12px;min-height:18px;color:var(--muted);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.screen{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:15px 16px;margin-bottom:14px;text-align:right;min-width:0}.expr{min-height:22px;color:var(--muted);font-size:15px;overflow-x:auto;white-space:nowrap}.result{font-size:clamp(34px,10vw,44px);font-weight:750;letter-spacing:-1.5px;overflow-x:auto;white-space:nowrap}.result.err{font-size:19px;color:var(--warn);letter-spacing:0}.keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.keys button,.control{font:inherit;border:0;cursor:pointer;border-radius:14px;min-height:54px;background:var(--key);color:var(--ink);font-size:20px;font-weight:600;box-shadow:inset 0 0 0 1px var(--line);touch-action:manipulation}.keys button.op{background:var(--op);box-shadow:none}.keys button.eq,.control.primary{background:var(--accent);color:var(--accentInk);box-shadow:none}.keys button:active,.control:active{transform:scale(.98)}button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.control{font-size:14px;min-height:46px;padding:10px}.toggle{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;margin-top:14px}.toggle input{accent-color:var(--accent);width:16px;height:16px}.help{font-size:12px;line-height:1.55;color:var(--muted);margin:14px 2px 0}.help b{color:var(--ink)}.install{display:none;margin-top:10px;width:100%}.install.show{display:block}.foot{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--line);margin-top:16px;padding-top:12px;color:var(--muted);font-size:11px}.foot button{border:0;background:none;color:var(--accent);font:inherit;font-weight:700;cursor:pointer}@media(max-width:360px){.keys{gap:6px}.keys button{min-height:49px}.app{padding:14px}.controls{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="app" id="app">
+  <header class="top">
+    <div class="brand"><div class="logo">±</div><div><div class="title">Voice Calculator</div><div class="subtitle">Talk it. Calculate it.</div></div></div>
+  </header>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">Ready for a calculation</span></div>
+  <div class="heard" id="heard" aria-live="polite"></div>
+  <section class="screen" aria-label="Calculator display">
+    <div class="expr" id="expr"></div><div class="result" id="result" aria-live="polite">0</div>
+  </section>
+  <div class="keys" id="keys"></div>
+  <div class="controls">
+    <button class="control primary" id="micBtn">🎙 Start listening</button>
+    <button class="control" id="clearBtn">Clear all</button>
+  </div>
+  <label class="toggle"><input type="checkbox" id="speak" checked> Speak answers</label>
+  <button class="control install" id="installBtn">Install Voice Calculator</button>
+  <p class="help">Try saying <b>“Hey calculator, twelve times four plus six”</b>, <b>“square root of 81”</b>, <b>“50 percent of 200”</b>, or <b>“clear”</b>. Voice recognition availability depends on your browser and may require internet.</p>
+  <footer class="foot"><span>Works on Android & Windows</span><button id="helpBtn" type="button">Voice tips</button></footer>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const app=$('app'), statusText=$('statusText'), heard=$('heard'), exprEl=$('expr'), resultEl=$('result'), micBtn=$('micBtn');
+  const layout=[['C','op'],['(', 'op'],[')','op'],['÷','op'],['7'],['8'],['9'],['×','op'],['4'],['5'],['6'],['−','op'],['1'],['2'],['3'],['+','op'],['0'],['.'],['⌫','op'],['=','eq']];
+  let expr='', awake=false, wantListening=false, rec=null, idleTimer=null;
+  layout.forEach(([label,cls])=>{const b=document.createElement('button');b.type='button';b.textContent=label;if(cls)b.className=cls;b.addEventListener('click',()=>press(label));$('keys').appendChild(b)});
+  function show(){exprEl.textContent=expr}
+  function error(msg='Could not calculate'){resultEl.textContent=msg;resultEl.classList.add('err')}
+  function press(k){resultEl.classList.remove('err');if(k==='C'){expr='';resultEl.textContent='0'}else if(k==='⌫')expr=expr.slice(0,-1);else if(k==='='){evaluate();return}else expr+=k;show()}
+  // A small parser avoids executing arbitrary JavaScript.
+  function evaluateExpression(input){
+    const s=input.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/√/g,'sqrt');
+    let i=0;
+    const ws=()=>{while(/\s/.test(s[i]||' '))i++};
+    function exprP(){let v=term();while(true){ws();if(s[i]==='+'){i++;v+=term()}else if(s[i]==='-'){i++;v-=term()}else break}return v}
+    function term(){let v=power();while(true){ws();if(s[i]==='*'){i++;v*=power()}else if(s[i]==='/'){i++;v/=power()}else if(s[i]==='%'){i++;v%=power()}else break}return v}
+    function power(){let v=unary();ws();if(s.slice(i,i+2)==='**'){i+=2;v=Math.pow(v,power())}return v}
+    function unary(){ws();if(s[i]==='+'){i++;return unary()}if(s[i]==='-'){i++;return -unary()}if(s.slice(i,i+4)==='sqrt'){i+=4;ws();expect('(');let n=exprP();ws();expect(')');if(n<0)throw Error();return Math.sqrt(n)}return atom()}
+    function atom(){ws();if(s[i]==='('){i++;let v=exprP();ws();expect(')');return v}let m=s.slice(i).match(/^(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i);if(!m)throw Error();i+=m[0].length;return Number(m[0])}
+    function expect(c){if(s[i]!==c)throw Error();i++}
+    const v=exprP();ws();if(i!==s.length||!Number.isFinite(v))throw Error();return v;
+  }
+  function evaluate(){try{if(!expr.trim())throw Error();const val=evaluateExpression(expr);const out=String(Number(val.toPrecision(12)));resultEl.textContent=out;resultEl.classList.remove('err');expr=out;show();return out}catch(e){error();return null}}
+  const ones={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19};
+  const tens={twenty:20,thirty:30,forty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+  function wordsToNumbers(s){const out=[];let cur=null;const flush=()=>{if(cur!==null){out.push(String(cur));cur=null}};for(const w of s.split(/\s+/)){if(Object.hasOwn(ones,w))cur=(cur||0)+ones[w];else if(Object.hasOwn(tens,w))cur=(cur||0)+tens[w];else if(w==='hundred')cur=(cur||1)*100;else if(w==='thousand')cur=(cur||1)*1000;else if(w==='and'&&cur!==null)continue;else{flush();out.push(w)}}flush();return out.join(' ')}
+  function speechToExpr(text){
+    let s=wordsToNumbers(text.toLowerCase().replace(/,/g,'').replace(/\b(point)\b/g,' point ').trim());
+    s=s.replace(/(\d)\s+point\s+(\d)/g,'$1.$2')
+      .replace(/(\d+(?:\.\d+)?)\s*percent of\s*(\d+(?:\.\d+)?)/g,'(($1/100)*$2)')
+      .replace(/square root of\s*(\d+(?:\.\d+)?)/g,'√($1)')
+      .replace(/(\d+(?:\.\d+)?)\s*squared/g,'($1**2)')
+      .replace(/(\d+(?:\.\d+)?)\s*percent/g,'($1/100)')
+      .replace(/to the power of|power of/g,'**')
+      .replace(/\b(plus|add)\b/g,'+').replace(/\b(minus|subtract|less)\b/g,'-')
+      .replace(/\b(times|multiplied by|multiply by|into|x)\b/g,'*')
+      .replace(/\b(divided by|divide by|over)\b/g,'/')
+      .replace(/\b(open bracket|open parenthesis)\b/g,'(').replace(/\b(close bracket|close parenthesis)\b/g,')')
+      .replace(/\b(what is|what's the answer|calculate|equals|equal|result|answer)\b/g,' ');
+    return s.replace(/[^0-9+\-*/().%√\s]/g,'').replace(/\s+/g,'');
+  }
+  const WAKE=/\b(hey|hello|ok|okay|wake up)\s+(calculator|calc)\b|\bwake up\b|\bcalculator\b/;
+  const SLEEP=/\b(go to sleep|sleep|goodbye|stop listening)\b/;
+  const CLEAR=/\b(clear|reset|all clear)\b/;
+  function say(t){if(!$('speak').checked||!('speechSynthesis'in window))return;speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(t))}
+  function setAwake(on){awake=on;app.classList.toggle('listening',on);statusText.textContent=on?'Listening — say a calculation':'Ready — say “Hey calculator”';clearTimeout(idleTimer);if(on)idleTimer=setTimeout(()=>{awake=false;app.classList.remove('listening');statusText.textContent='Ready — say “Hey calculator”'},20000)}
+  function handleCommand(raw){let t=raw.toLowerCase().trim();if(!t)return;if(SLEEP.test(t)){setAwake(false);say('Going to sleep');return}if(CLEAR.test(t)){press('C');say('Cleared');return}if(/\b(delete|backspace|undo)\b/.test(t)){press('⌫');return}
+    // Basic Hindi command aliases; browser recognition language is selectable below.
+    t=t.replace(/\b(jod|jodo|plus)\b/g,' plus ').replace(/\b(ghata|ghatao|minus)\b/g,' minus ').replace(/\b(guna|multiply)\b/g,' times ').replace(/\b(bhaag|divide)\b/g,' divided by ');
+    const parsed=speechToExpr(t);if(!parsed){statusText.textContent='Didn’t catch a sum — try again';return}expr=parsed;show();const ans=evaluate();if(ans!==null)say('The answer is '+ans);if(awake)setAwake(true)}
+  function onSpeech(transcript){heard.textContent='“'+transcript+'”';const t=transcript.toLowerCase();if(!awake){const m=t.match(WAKE);if(!m)return;setAwake(true);say('Yes?');const rest=t.slice(m.index+m[0].length).trim();if(rest)handleCommand(rest)}else handleCommand(t.replace(WAKE,' '))}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){statusText.textContent='Voice recognition unavailable here — use a supported browser';micBtn.disabled=true}else{
+    rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='en-US';
+    rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)onSpeech(e.results[i][0].transcript)};
+    rec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){wantListening=false;statusText.textContent='Microphone blocked — allow access and try again';micBtn.textContent='🎙 Start listening'}};
+    rec.onend=()=>{if(wantListening){try{rec.start()}catch(_){}}};
+    micBtn.addEventListener('click',()=>{if(wantListening){wantListening=false;rec.stop();setAwake(false);statusText.textContent='Microphone off';micBtn.textContent='🎙 Start listening'}else{wantListening=true;try{rec.start();setAwake(false);micBtn.textContent='Stop listening'}catch(_){wantListening=false;statusText.textContent='Could not start microphone — check browser permissions'}}});
+  }
+  $('clearBtn').addEventListener('click',()=>press('C'));
+  $('helpBtn').addEventListener('click',()=>alert('English: “Hey calculator, twelve times four plus six”. Try “square root of 81”, “50 percent of 200”, “clear”, or “go to sleep”. For Hindi, change the recognition language in a future update; browser voice support varies.'));
+  let deferredPrompt=null;const installBtn=$('installBtn');
+  window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;installBtn.classList.add('show')});
+  installBtn.addEventListener('click',async()=>{if(!deferredPrompt){alert('Use your browser menu and choose “Install app” or “Add to Home Screen”.');return}deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;installBtn.classList.remove('show')});
+  if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+})();
+</script>
+</body>
+</html>
